@@ -5,6 +5,7 @@ use axum::{
     Router,
 };
 use std::net::SocketAddr;
+use tower_http::services::ServeDir;
 
 #[derive(serde::Deserialize, Debug)]
 struct HelloParams {
@@ -14,15 +15,25 @@ struct HelloParams {
 #[tokio::main]
 async fn main() {
     let app = Router::new()
-        .route("/hello", get(handler_hello))
-        // Change {name} to :name
-        .route("/hello2/:name", get(handler_hello2)); 
+    .merge(routes_hello())
+    .fallback_service(routes_static());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
     println!("Listening on http://{addr}");
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+
+fn routes_hello() -> Router {
+    Router::new()
+        .route("/hello", get(handler_hello))
+        // Change {name} to :name
+        .route("/hello2/:name", get(handler_hello2))
+}
+
+fn routes_static() -> Router {
+    Router::new().nest_service("/", ServeDir::new("./"))
 }
 
 async fn handler_hello(Query(params): Query<HelloParams>) -> impl IntoResponse {
