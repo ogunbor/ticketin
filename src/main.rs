@@ -1,3 +1,4 @@
+pub use self::error::{Error, Result};
 use axum::{
     extract::{Path, Query},
     response::{Html, IntoResponse},
@@ -7,6 +8,9 @@ use axum::{
 use std::net::SocketAddr;
 use tower_http::services::ServeDir;
 
+mod error;
+mod web;
+
 #[derive(serde::Deserialize, Debug)]
 struct HelloParams {
     name: Option<String>,
@@ -15,8 +19,9 @@ struct HelloParams {
 #[tokio::main]
 async fn main() {
     let app = Router::new()
-    .merge(routes_hello())
-    .fallback_service(routes_static());
+        .merge(routes_hello())
+        .merge(web::routes_login::routes())
+        .fallback_service(routes_static());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
     println!("Listening on http://{addr}");
