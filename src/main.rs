@@ -1,13 +1,15 @@
 pub use self::error::{Error, Result};
+use axum::response::{Html, IntoResponse, Response};
 use axum::{
     extract::{Path, Query},
-    response::{Html, IntoResponse},
+    middleware,
     routing::get,
     Router,
 };
+
+use tower_cookies::CookieManagerLayer;
 use std::net::SocketAddr;
 use tower_http::services::ServeDir;
-
 mod error;
 mod web;
 
@@ -21,6 +23,8 @@ async fn main() {
     let app = Router::new()
         .merge(routes_hello())
         .merge(web::routes_login::routes())
+        .layer(middleware::map_response(main_response_mapper))
+        .layer(CookieManagerLayer::new())
         .fallback_service(routes_static());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
@@ -28,6 +32,14 @@ async fn main() {
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+
+// for middleware
+async fn main_response_mapper(res: Response) -> Response {
+    println!("->> {:<12} - main_response_mapper", "RES_MAPPER");
+
+    println!();
+    res
 }
 
 fn routes_hello() -> Router {
